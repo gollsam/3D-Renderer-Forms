@@ -16,6 +16,7 @@ using System.Runtime.InteropServices;
 using System.Security.Policy;
 using System.Windows.Forms.VisualStyles;
 using System.Windows.Input;
+using System.IO;
 
 namespace _3D_Graphics_Engine_Forms
 {
@@ -33,6 +34,9 @@ namespace _3D_Graphics_Engine_Forms
         bool dDown = false;
         bool eDown = false;
         bool qDown = false;
+
+
+        List<Matrix<double>> points = new List<Matrix<double>>();
 
         List<Matrix<double>> vectorsInitial = new List<Matrix<double>>(new Matrix<double>[] {
             DenseMatrix.OfArray(new double[,] { { 0.5 },{ 0.5 },{ 0 } } ),
@@ -55,9 +59,27 @@ namespace _3D_Graphics_Engine_Forms
         float a = (float)(3 * Math.PI/4);
         float b = (float)Math.PI * 3/4;
 
+        bool hasLoadedSTL = false;
+
         public Form1()
         {
             InitializeComponent();
+            dateLabel.Text = System.DateTime.Now.ToString();
+
+            if(!hasLoadedSTL )
+            {
+                List<face> faces = StlActions.loadSTL();
+
+                for (int f = 0; f < faces.Count; f++)
+                {
+                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v1.x }, { faces[f].v1.y }, { faces[f].v1.z } }));
+                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v2.x }, { faces[f].v2.y }, { faces[f].v2.z } }));
+                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v3.x }, { faces[f].v3.y }, { faces[f].v3.z } }));
+                }
+
+                hasLoadedSTL = true;
+            }
+
             LockMouse();
             Cursor.Hide();
             this.DoubleBuffered = true;
@@ -98,35 +120,8 @@ namespace _3D_Graphics_Engine_Forms
             vectorsFinal.Clear();
             vectorsOffset.Clear();
             vectorsProjected.Clear();
-            //b += 0.02f;
 
             Matrix<double> matrix = Calculations.CalculateProjectionMatrix((float)Math.PI * 1 / 2, (float)Math.PI * 1 / 2);
-
-            /*
-            for (int i = 0; i < vectorsInitial.Count; i++)
-            {
-                vectorsOffset.Add(DenseMatrix.OfArray(new double[,]
-                {
-                    { vectorsInitial[i][0,0] - cameraX},
-                    { vectorsInitial[i][1,0] - cameraY},
-                    { vectorsInitial[i][2,0] - cameraZ},
-                }));
-            }
-
-            for (int i = 0; i < vectorsOffset.Count; i++)
-            {
-                vectorsProjected.Add(matrix * vectorsOffset[i]);
-            }
-
-            for (int i = 0; i < vectorsProjected.Count; i++)
-            {
-                vectorsFinal.Add(Calculations.DistortPerspective(cameraX, cameraY, cameraZ, vectorsOffset[i], vectorsProjected[i]));
-            }
-            */
-
-
-            //b = System.Windows.Forms.Cursor.Position.X * -0.001f;
-            //a = System.Windows.Forms.Cursor.Position.Y * 0.001f;
 
             Matrix<double> newVec = DenseMatrix.OfArray(new double[,]
             {
@@ -144,20 +139,6 @@ namespace _3D_Graphics_Engine_Forms
 
             newVec = matrix * newVec;
 
-            /*
-            for(int i = 0; i < basisVectors.Count; i++)
-            {
-                float euclidDist = (float)Math.Sqrt(Math.Pow(basisVectors[i][0, 0] - cameraX, 2) + Math.Pow(basisVectors[i][1, 0] - cameraY, 2) + Math.Pow(basisVectors[i][2, 0] - cameraZ, 2));
-
-                basisOffset.Add(DenseMatrix.OfArray(new double[,]
-                {
-                    { euclidDist * Math.Cos(b) + basisVectors[i][0,0]},
-                    { euclidDist * Math.Sin(b) + basisVectors[i][1,0]},
-                    { 1}
-                }));
-            }
-            */
-
             basisVectors[0] = DenseMatrix.OfArray(new double[,]
             {
                 {1*Math.Sin(b) },
@@ -165,12 +146,6 @@ namespace _3D_Graphics_Engine_Forms
                 {1*Math.Sin(a) }
             });
 
-            //basisVectors[1] = DenseMatrix.OfArray(new double[,]
-            //{
-            //               {1*Math.Cos(b) },
-            //              {0 },
-            //             {0 }
-            //});
 
             Matrix<double> newVecTemp = DenseMatrix.OfArray(new double[,]
             {
@@ -184,12 +159,9 @@ namespace _3D_Graphics_Engine_Forms
                 basisProjected.Add(matrix * basisOffset[i]);
             }
 
-            //Console.WriteLine(basisProjected.Count);
-
             for (int i = 0; i < basisProjected.Count; i++)
             {
                 basisFinal.Add(basisProjected[i]);
-                //basisFinal.Add(Calculations.DistortPerspective(cameraX, cameraY, cameraZ, basisOffset[i], basisProjected[i]));
             }
 
             Brush tempBrush;
@@ -227,8 +199,54 @@ namespace _3D_Graphics_Engine_Forms
             });
 
 
+            Console.WriteLine(points.Count());
+
             Matrix<double> cameraPos = DenseMatrix.OfArray(new double[,] { { cameraX }, { cameraY }, { cameraZ } });
             Matrix<double> vOrtho = Calculations.GetVOrtho(a, b);
+
+            List<Matrix<double>> tempPoints = new List<Matrix<double>>();
+            foreach (Matrix<double> point in points)
+                tempPoints.Add(point);
+            List<Matrix<double>> pointsToDraw = new List<Matrix<double>>();
+
+            for (int i = 0; i < tempPoints.Count(); i++)
+            {
+                tempPoints[i] = Calculations.GetB(a, b).Inverse() * (tempPoints[i] - (cameraPos + vOrtho));
+                if (Calculations.DotProduct(tempPoints[i], globalYBase) > 0)
+                {
+                    pointsToDraw.Add(tempPoints[i]);
+                }
+            }
+
+
+            for (int i = 0; i < pointsToDraw.Count(); i++)
+            {
+                pointsToDraw[i] = Calculations.DistortPerspective(0, 0, 0, pointsToDraw[i], perspectiveMod);
+
+                g.FillRectangle(brushRed, (float)Math.Round(100 * ((float)pointsToDraw[i][0, 0]) + 1084 / 2), -(float)Math.Round(100 * ((float)pointsToDraw[i][1, 0]) - 704 / 2), 4, 4);
+            }
+
+            for(int i = 0; i <12; i++)
+            {
+                List<Point> pointsPoly = new List<Point>();
+                Point point1 = new Point();
+                Point point2 = new Point();
+                Point point3 = new Point();
+                point1.X = (int)Math.Round(100 * ((float)pointsToDraw[i][0, 0]) + 1084 / 2);
+                point1.Y = -(int)Math.Round(100 * ((float)pointsToDraw[i][1, 0]) - 704 / 2);
+                point2.X = (int)Math.Round(100 * ((float)pointsToDraw[i+1][0, 0]) + 1084 / 2);
+                point2.Y = -(int)Math.Round(100 * ((float)pointsToDraw[i+1][1, 0]) - 704 / 2);
+                point3.X = (int)Math.Round(100 * ((float)pointsToDraw[i+2][0, 0]) + 1084 / 2);
+                point3.Y = -(int)Math.Round(100 * ((float)pointsToDraw[i+2][1, 0]) - 704 / 2);
+                pointsPoly.Add(point1);
+                pointsPoly.Add(point2);
+                pointsPoly.Add(point3);
+                g.FillPolygon(brushBeige, pointsPoly.ToArray());
+                g.DrawPolygon(greenPen, pointsPoly.ToArray());
+                i += 2;
+            }
+
+
 
             Matrix<double> localXBase = Calculations.GetB(a, b).Inverse() * (globalXBase - (cameraPos + vOrtho));
             Matrix<double> localYBase = Calculations.GetB(a, b).Inverse() * (globalYBase - (cameraPos + vOrtho));
@@ -238,6 +256,7 @@ namespace _3D_Graphics_Engine_Forms
             bool drawX;
             bool drawY;
             bool drawZ;
+
 
             if (Calculations.DotProduct(localXBase, globalYBase) > 0)
                 drawX = true;
@@ -253,7 +272,6 @@ namespace _3D_Graphics_Engine_Forms
                 drawZ = true;
             else
                 drawZ = false;
-            //Thread.Sleep(10000000);
 
             Matrix<double> distortedX = Calculations.DistortPerspective(0, 0, 0, localXBase, perspectiveMod);
             Matrix<double> distortedY = Calculations.DistortPerspective(0, 0, 0, localYBase, perspectiveMod);
@@ -266,7 +284,6 @@ namespace _3D_Graphics_Engine_Forms
             if (drawZ)
                 g.FillRectangle(brushBlue, (float)Math.Round(100 * ((float)distortedZ[0, 0]) + 1084 / 2), -(float)Math.Round(100 * ((float)distortedZ[1, 0]) - 704 / 2), 4, 4);
 
-            //g.FillRectangle(brush, (float)Math.Round((double)100 * ((float)localOriginBase[0, 0] + 8)), -(float)Math.Round((double)100 * ((float)localOriginBase[2, 0] - 5)), 4, 4);
             drawFloor();
 
             void drawFloor()
@@ -321,47 +338,6 @@ namespace _3D_Graphics_Engine_Forms
                 if (sDown) { cameraX -= 0.1f * (float)Math.Cos(b); cameraY -= 0.1f * (float)Math.Sin(b); }
                 if (eDown) { cameraZ += 0.1f; }
                 if (qDown) { cameraZ -= 0.1f; }
-
-
-                //if ()
-                //   cameraX += 0.2f * (float)Math.Cos(b); cameraY += 0.2f * (float)Math.Sin(b);
-
-
-                /*
-                Console.WriteLine("move?");
-                string readConsole = Console.ReadLine();
-
-                if (readConsole == "W")
-                    cameraY++;
-                else if (readConsole == "A")
-                    cameraX--;
-                else if (readConsole == "D")
-                    cameraX++;
-                else if (readConsole == "S")
-                    cameraY--;
-                */
-                //g.FillRectangle(tempBrush, (float)(100 * (basis[0, 0] + 5)), -(float)(100 * (newVec[1, 0] - 3)), 2, 2);
-                //g.FillRectangle(brush, (float)(100 * (stableVec[0, 0] + 5)), -(float)(100 * (stableVec[1, 0] - 3)), 2, 2);
-
-                //for (int i = 0; i < vectorsFinal.Count; i++)
-                //{
-                //   g.FillRectangle(brush, (float)Math.Round(100 * ((float)vectorsFinal[i][0, 0] + 5)), -(float)Math.Round(100 * ((float)vectorsFinal[i][1, 0] -3)), 1, 1);
-                //}
-
-
-                /*
-                g.FillRectangle(brush, (float)Math.Round(100 * ((float)basisProjected[3][0, 0] + 5)), -(float)Math.Round(100 * ((float)basisProjected[3][1, 0] - 3)), 2, 2);
-
-                g.DrawLine(redPen, (float)Math.Round(100 * ((float)basisFinal[3][0, 0] + 5)), -(float)Math.Round(100 * ((float)basisFinal[3][1, 0] - 3)),
-                (float)Math.Round(100 * ((float)basisFinal[0][0, 0] + 5)), -(float)(Math.Round(100 * ((float)basisFinal[0][1, 0] - 3))));
-
-                g.DrawLine(greenPen, (float)Math.Round(100 * ((float)basisFinal[3][0, 0] + 5)), -(float)Math.Round(100 * ((float)basisFinal[3][1, 0] - 3)),
-                (float)Math.Round(100 * ((float)basisFinal[1][0, 0] + 5)), -(float)(Math.Round(100 * ((float)basisFinal[1][1, 0] - 3))));
-
-                g.DrawLine(bluePen, (float)Math.Round(100 * ((float)basisFinal[3][0, 0] + 5)), -(float)Math.Round(100 * ((float)basisFinal[3][1, 0] - 3)),
-                (float)Math.Round(100 * ((float)basisFinal[2][0, 0] + 5)), -(float)(Math.Round(100 * ((float)basisFinal[2][1, 0] - 3))));
-                */
-
             }
         }
 
@@ -451,6 +427,7 @@ namespace _3D_Graphics_Engine_Forms
         {
 
         }
+    
     }
 
     public class Calculations
@@ -575,4 +552,84 @@ namespace _3D_Graphics_Engine_Forms
             return prod;
         }
     }
+
+    public class StlActions
+    {
+        static string path = @"C:\Users\Sam\Desktop\Test.stl";
+
+        public static List<face> loadSTL()
+        {
+            List<face> faces = new List<face>();
+
+            Object locker = new object();
+            lock (locker)
+            {
+                using (BinaryReader br = new BinaryReader(File.Open(path, FileMode.Open)))
+                {
+                    byte[] header = br.ReadBytes(80);
+                    byte[] length = br.ReadBytes(4); //NORM
+                    int faceCount = BitConverter.ToInt32(length, 0);
+                    Console.WriteLine(faceCount);
+
+                    for(int i = 0; i < faceCount;i++)
+                    {
+                        br.ReadBytes(12); //normal
+                        byte[] faceBytes = br.ReadBytes(36);
+                        vertex vertexTemp1 = new vertex();
+                        vertexTemp1.x = BitConverter.ToSingle(faceBytes, 0);
+                        vertexTemp1.y = BitConverter.ToSingle(faceBytes, 4);
+                        vertexTemp1.z = BitConverter.ToSingle(faceBytes, 8);
+
+                        vertex vertexTemp2 = new vertex();
+                        vertexTemp2.x = BitConverter.ToSingle(faceBytes, 12);
+                        vertexTemp2.y = BitConverter.ToSingle(faceBytes, 16);
+                        vertexTemp2.z = BitConverter.ToSingle(faceBytes, 20);
+
+                        vertex vertexTemp3 = new vertex();
+                        vertexTemp3.x = BitConverter.ToSingle(faceBytes, 24);
+                        vertexTemp3.y = BitConverter.ToSingle(faceBytes, 28);
+                        vertexTemp3.z = BitConverter.ToSingle(faceBytes, 32);
+
+                        face faceTemp = new face();
+                        faceTemp.v1 = vertexTemp1;
+                        faceTemp.v2 = vertexTemp2;
+                        faceTemp.v3 = vertexTemp3;
+
+                        faces.Add(faceTemp);
+
+                        continue;
+                    }
+
+                    byte[] corner1 = br.ReadBytes(4);
+                    byte[] corner2 = br.ReadBytes(4);
+                    byte[] corner3 = br.ReadBytes(4);
+
+                    Console.WriteLine(BitConverter.ToSingle(corner1, 0));
+                    Console.WriteLine(BitConverter.ToSingle(corner2, 0));
+                    Console.WriteLine(BitConverter.ToSingle(corner3, 0));
+
+                    //
+                }
+
+            }
+
+            return faces;
+        }
+    }
+    
+    public struct face
+    {
+        public vertex v1;
+        public vertex v2;
+        public vertex v3;
+    }
+
+    public struct vertex
+    {
+        public float x;
+        public float y;
+        public float z;
+    }
 }
+
+

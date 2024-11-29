@@ -30,6 +30,7 @@
         {
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.dateLabel = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -57,10 +58,24 @@
             this.label2.TabIndex = 1;
             this.label2.Text = "C#";
             // 
+            // dateLabel
+            // 
+            this.dateLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.dateLabel.AutoSize = true;
+            this.dateLabel.Font = new System.Drawing.Font("Times New Roman", 10.25F);
+            this.dateLabel.ForeColor = System.Drawing.Color.Olive;
+            this.dateLabel.Location = new System.Drawing.Point(0, 36);
+            this.dateLabel.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
+            this.dateLabel.Name = "dateLabel";
+            this.dateLabel.Size = new System.Drawing.Size(33, 16);
+            this.dateLabel.TabIndex = 2;
+            this.dateLabel.Text = "Date";
+            // 
             // Form1
             // 
             this.BackColor = System.Drawing.Color.Linen;
             this.ClientSize = new System.Drawing.Size(1064, 661);
+            this.Controls.Add(this.dateLabel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
@@ -79,6 +94,7 @@
 
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label dateLabel;
     }
 }
 
