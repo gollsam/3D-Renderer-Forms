@@ -31,6 +31,10 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.dateLabel = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.PosX = new System.Windows.Forms.Label();
+            this.PosY = new System.Windows.Forms.Label();
+            this.PosZ = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -60,7 +64,6 @@
             // 
             // dateLabel
             // 
-            this.dateLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.dateLabel.AutoSize = true;
             this.dateLabel.Font = new System.Drawing.Font("Times New Roman", 10.25F);
             this.dateLabel.ForeColor = System.Drawing.Color.Olive;
@@ -71,16 +74,56 @@
             this.dateLabel.TabIndex = 2;
             this.dateLabel.Text = "Date";
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(12, 179);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(61, 13);
+            this.label3.TabIndex = 3;
+            this.label3.Text = "CameraInfo";
+            // 
+            // PosX
+            // 
+            this.PosX.AutoSize = true;
+            this.PosX.Location = new System.Drawing.Point(12, 196);
+            this.PosX.Name = "PosX";
+            this.PosX.Size = new System.Drawing.Size(51, 13);
+            this.PosX.TabIndex = 4;
+            this.PosX.Text = "PositionX";
+            // 
+            // PosY
+            // 
+            this.PosY.AutoSize = true;
+            this.PosY.Location = new System.Drawing.Point(12, 209);
+            this.PosY.Name = "PosY";
+            this.PosY.Size = new System.Drawing.Size(51, 13);
+            this.PosY.TabIndex = 5;
+            this.PosY.Text = "PositionY";
+            // 
+            // PosZ
+            // 
+            this.PosZ.AutoSize = true;
+            this.PosZ.Location = new System.Drawing.Point(12, 222);
+            this.PosZ.Name = "PosZ";
+            this.PosZ.Size = new System.Drawing.Size(51, 13);
+            this.PosZ.TabIndex = 6;
+            this.PosZ.Text = "PositionZ";
+            // 
             // Form1
             // 
             this.BackColor = System.Drawing.Color.Linen;
             this.ClientSize = new System.Drawing.Size(1064, 661);
+            this.Controls.Add(this.PosZ);
+            this.Controls.Add(this.PosY);
+            this.Controls.Add(this.PosX);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.dateLabel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
             this.Name = "Form1";
-            this.Text = "3D Graphics Engine";
+            this.Text = "Linear Algebra - 3D Graphics Engine";
             this.Load += new System.EventHandler(this.Form1_Load_1);
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.FrmMain_Paint);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.KeyPressed);
@@ -95,6 +138,10 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label dateLabel;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label PosX;
+        private System.Windows.Forms.Label PosY;
+        private System.Windows.Forms.Label PosZ;
     }
 }
 

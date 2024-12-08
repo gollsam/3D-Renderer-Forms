@@ -19,14 +19,16 @@ using System.Windows.Input;
 using System.IO;
 
 namespace _3D_Graphics_Engine_Forms
-{
+{ 
     public partial class Form1 : Form
     {
         System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        System.Windows.Forms.Timer physicsTimer = new System.Windows.Forms.Timer();
+        System.Windows.Forms.Timer updateTimer = new System.Windows.Forms.Timer();
 
-        float cameraX = -10;
-        float cameraY = -10;
-        float cameraZ = 10;
+        Engine.EngineSettings engineSettings = new Engine.EngineSettings(80, 120, 120);
+
+        Engine.EngineObject camera = new Engine.EngineObject("Camera");
 
         bool wDown = false;
         bool aDown = false;
@@ -56,6 +58,44 @@ namespace _3D_Graphics_Engine_Forms
             DenseMatrix.OfArray(new double[,] { {0}, {0}, {0} })
         });
 
+        List<Matrix<double>> cubeFace1 = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {1}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {1} }),
+        });
+
+        List<Matrix<double>> cubeFace2 = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {0}, {1}, {1} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {1}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {1} }),
+        });
+
+        List<Matrix<double>> cubeFace3 = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {1}, {0}, {1} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {0}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {1} }),
+        });
+
+        List<Matrix<double>> cubeFace4 = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {0}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {1} }),
+        });
+
+        List<Matrix<double>> cubeFace5 = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {0}, {0}, {1} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {0}, {1} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {1}, {1} }),
+            DenseMatrix.OfArray(new double[,] { {0}, {1}, {1} }),
+        });
+
+        List<Matrix<double>> floor = new List<Matrix<double>>(new Matrix<double>[] {
+            DenseMatrix.OfArray(new double[,] { {-1}, {-1}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {-1}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {1}, {1}, {0} }),
+            DenseMatrix.OfArray(new double[,] { {-1}, {1}, {0} }),
+        });
+
         float a = (float)(3 * Math.PI/4);
         float b = (float)Math.PI * 3/4;
 
@@ -66,31 +106,51 @@ namespace _3D_Graphics_Engine_Forms
             InitializeComponent();
             dateLabel.Text = System.DateTime.Now.ToString();
 
-            if(!hasLoadedSTL )
-            {
-                List<face> faces = StlActions.loadSTL();
-
-                for (int f = 0; f < faces.Count; f++)
-                {
-                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v1.x }, { faces[f].v1.y }, { faces[f].v1.z } }));
-                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v2.x }, { faces[f].v2.y }, { faces[f].v2.z } }));
-                    points.Add(DenseMatrix.OfArray(new double[,] { { faces[f].v3.x }, { faces[f].v3.y }, { faces[f].v3.z } }));
-                }
-
-                hasLoadedSTL = true;
-            }
-
             LockMouse();
             Cursor.Hide();
             this.DoubleBuffered = true;
             timer.Enabled = true;
-            timer.Interval = 9;
+            timer.Interval = (int)Math.Round(1000f/engineSettings.renderUpdate);
             timer.Tick += new EventHandler(timer_Tick);
+
+            physicsTimer.Enabled = true;
+            physicsTimer.Interval = (int)Math.Round(1000f/engineSettings.physicsUpdate);
+            physicsTimer.Tick += new EventHandler(UpdatePhysics);
+
+            updateTimer.Enabled = true;
+            updateTimer.Interval = (int)Math.Round(1000f / engineSettings.update);
+            updateTimer.Tick += new EventHandler(Update);
         }
 
         private void timer_Tick(object sender, EventArgs e)
         {
             this.Invalidate();
+        }
+
+        void UpdatePhysics(object sender, EventArgs e)
+        {
+
+            if (camera.position.z > 2)
+            {
+                camera.velocity.z -= 9.8f / engineSettings.physicsUpdate;
+            }
+            else
+                camera.velocity.z = 0;
+            camera.position.z += camera.velocity.z/engineSettings.physicsUpdate;
+        }
+
+        void Update(object sender, EventArgs e)
+        {
+            PosX.Text = camera.position.x.ToString();
+            PosY.Text = camera.position.y.ToString();
+            PosZ.Text = camera.position.z.ToString();
+
+            if (aDown) { camera.position.x -= 0.05f * (float)Math.Cos(b - Math.PI / 2); camera.position.y -= 0.05f * (float)Math.Sin(b - Math.PI / 2); }
+            if (dDown) { camera.position.x += 0.05f * (float)Math.Cos(b - Math.PI / 2); camera.position.y += 0.05f * (float)Math.Sin(b - Math.PI / 2); }
+            if (wDown) { camera.position.x += 0.05f * (float)Math.Cos(b); camera.position.y += 0.05f * (float)Math.Sin(b); }
+            if (sDown) { camera.position.x -= 0.05f * (float)Math.Cos(b); camera.position.y -= 0.05f * (float)Math.Sin(b); }
+            if (eDown) { camera.position.z += 0.05f; }
+            if (qDown) { camera.position.z -= 0.05f; }
         }
 
         private void FrmMain_Paint(object sender, PaintEventArgs e)
@@ -201,7 +261,7 @@ namespace _3D_Graphics_Engine_Forms
 
             Console.WriteLine(points.Count());
 
-            Matrix<double> cameraPos = DenseMatrix.OfArray(new double[,] { { cameraX }, { cameraY }, { cameraZ } });
+            Matrix<double> cameraPos = DenseMatrix.OfArray(new double[,] { { camera.position.x }, { camera.position.y }, { camera.position.z } });
             Matrix<double> vOrtho = Calculations.GetVOrtho(a, b);
 
             List<Matrix<double>> tempPoints = new List<Matrix<double>>();
@@ -226,6 +286,7 @@ namespace _3D_Graphics_Engine_Forms
                 g.FillRectangle(brushRed, (float)Math.Round(100 * ((float)pointsToDraw[i][0, 0]) + 1084 / 2), -(float)Math.Round(100 * ((float)pointsToDraw[i][1, 0]) - 704 / 2), 4, 4);
             }
 
+            /*
             for(int i = 0; i <12; i++)
             {
                 List<Point> pointsPoly = new List<Point>();
@@ -245,6 +306,7 @@ namespace _3D_Graphics_Engine_Forms
                 g.DrawPolygon(greenPen, pointsPoly.ToArray());
                 i += 2;
             }
+            */
 
 
 
@@ -278,13 +340,42 @@ namespace _3D_Graphics_Engine_Forms
             Matrix<double> distortedZ = Calculations.DistortPerspective(0, 0, 0, localZBase, perspectiveMod);
 
             if (drawX)
-                g.FillRectangle(brushRed, (float)Math.Round(100 * ((float)distortedX[0, 0]) + 1084/2), -(float)Math.Round(100 * ((float)distortedX[1, 0]) - 704/2), 4, 4);
+                g.FillRectangle(brushRed, (float)Math.Round(100 * ((float)distortedX[0, 0]) + this.Width/2), -(float)Math.Round(100 * ((float)distortedX[1, 0]) - this.Height/2), 4, 4);
             if (drawY)
-                g.FillRectangle(brushGreen, (float)Math.Round(100 * ((float)distortedY[0, 0]) + 1084/2), -(float)Math.Round(100 * ((float)distortedY[1, 0]) - 704/2), 4, 4);
+                g.FillRectangle(brushGreen, (float)Math.Round(100 * ((float)distortedY[0, 0]) + this.Width / 2), -(float)Math.Round(100 * ((float)distortedY[1, 0]) - this.Height / 2), 4, 4);
             if (drawZ)
-                g.FillRectangle(brushBlue, (float)Math.Round(100 * ((float)distortedZ[0, 0]) + 1084 / 2), -(float)Math.Round(100 * ((float)distortedZ[1, 0]) - 704 / 2), 4, 4);
+                g.FillRectangle(brushBlue, (float)Math.Round(100 * ((float)distortedZ[0, 0]) + this.Width / 2), -(float)Math.Round(100 * ((float)distortedZ[1, 0]) - this.Height / 2), 4, 4);
 
-            drawFloor();
+            //drawFloor();
+
+            DrawFace(floor);
+            DrawFace(cubeFace1);
+            DrawFace(cubeFace2);
+            DrawFace(cubeFace3);
+            DrawFace(cubeFace4);
+            DrawFace(cubeFace5);
+
+            //tempPoints[i] = Calculations.GetB(a, b).Inverse() * (tempPoints[i] - (cameraPos + vOrtho));
+            void DrawFace(List<Matrix<double>> points)
+            {
+                List<Point> pointList = new List<Point>();
+                List<Matrix<double>> tempPointsFace = new List<Matrix<double>>( new Matrix<double>[points.Count]);
+                Console.WriteLine(tempPointsFace.Count);
+
+                for(int i = 0; i < points.Count(); i++)
+                {
+                    Matrix<double> posVec = DenseMatrix.OfArray(new double[,] { { camera.position.x}, { camera.position.y}, { camera.position.z } });
+                    tempPointsFace[i] = Calculations.GetB(a, b).Inverse() * (points[i] - (posVec + vOrtho));
+                    tempPointsFace[i] = Calculations.DistortPerspective(0, 0, 0, tempPointsFace[i], perspectiveMod);
+                    Point tempPoint = new Point();
+                    tempPoint.X = (int)Math.Round(100 * ((float)tempPointsFace[i][0, 0]) + this.Width / 2);
+                    tempPoint.Y = -(int)Math.Round(100 * ((float)tempPointsFace[i][1, 0]) - this.Height / 2);
+                    pointList.Add(tempPoint);
+                }
+
+                g.FillPolygon(brushBeige, pointList.ToArray());
+                g.DrawPolygon(redPen, pointList.ToArray());
+            }
 
             void drawFloor()
             {
@@ -306,8 +397,8 @@ namespace _3D_Graphics_Engine_Forms
 
                 for (int i = 0; i <= 20; i++)
                 {
-                    g.DrawLine(beigePen, (float)Math.Round(100 * (xPointsA[i][0, 0]) + 1084/2), -(float)Math.Round(100 * (xPointsA[i][1, 0]) - 704/2),
-                        (float)Math.Round(100 * (xPointsB[i][0, 0]) + 1084/2), -(float)Math.Round(100 * (xPointsB[i][1, 0]) - 704/2));
+                    g.DrawLine(beigePen, (float)Math.Round(100 * (xPointsA[i][0, 0]) + this.Width / 2), -(float)Math.Round(100 * (xPointsA[i][1, 0]) - this.Height / 2),
+                        (float)Math.Round(100 * (xPointsB[i][0, 0]) + this.Width / 2), -(float)Math.Round(100 * (xPointsB[i][1, 0]) - this.Height / 2));
                 }
 
                 List<Matrix<double>> yPointsA = new List<Matrix<double>>();
@@ -328,16 +419,24 @@ namespace _3D_Graphics_Engine_Forms
 
                 for (int i = 0; i <= 20; i++)
                 {
-                    g.DrawLine(beigePen, (float)Math.Round(100 * (yPointsA[i][0, 0]) + 1084 / 2), -(float)Math.Round(100 * (yPointsA[i][1, 0]) - 704/2),
-                        (float)Math.Round(100 * (yPointsB[i][0, 0]) + 1084 / 2), -(float)Math.Round(100 * (yPointsB[i][1, 0]) - 704/2));
+                    g.DrawLine(beigePen, (float)Math.Round(100 * (yPointsA[i][0, 0]) + this.Width / 2), -(float)Math.Round(100 * (yPointsA[i][1, 0]) - this.Height / 2),
+                        (float)Math.Round(100 * (yPointsB[i][0, 0]) + this.Width / 2), -(float)Math.Round(100 * (yPointsB[i][1, 0]) - this.Height / 2));
                 }
 
-                if (aDown) { cameraX -= 0.1f * (float)Math.Cos(b - Math.PI / 2); cameraY -= 0.1f * (float)Math.Sin(b - Math.PI / 2); }
-                if (dDown) { cameraX += 0.1f * (float)Math.Cos(b - Math.PI / 2); cameraY += 0.1f * (float)Math.Sin(b - Math.PI / 2); }
-                if (wDown) { cameraX += 0.1f * (float)Math.Cos(b); cameraY += 0.1f * (float)Math.Sin(b); }
-                if (sDown) { cameraX -= 0.1f * (float)Math.Cos(b); cameraY -= 0.1f * (float)Math.Sin(b); }
-                if (eDown) { cameraZ += 0.1f; }
-                if (qDown) { cameraZ -= 0.1f; }
+                Point[] groundPoints = new Point[4];
+                groundPoints[0].X = -10;
+                groundPoints[0].Y = -10;
+
+                groundPoints[1].X = 10;
+                groundPoints[1].Y = -10;
+
+                groundPoints[2].X = -10;
+                groundPoints[2].Y = 10;
+
+                groundPoints[3].X = 10;
+                groundPoints[3].Y = 10;
+
+                g.FillPolygon(brushBeige, groundPoints);
             }
         }
 
@@ -355,6 +454,7 @@ namespace _3D_Graphics_Engine_Forms
             else if (e.KeyCode == Keys.E) { eDown = true; }
             else if (e.KeyCode == Keys.Escape) { _isMouseLocked = false; this.Capture = false; Cursor.Show(); }
             else if (e.KeyCode == Keys.Oemtilde) { _isMouseLocked = true; this.Capture = true; Cursor.Hide(); }
+            else if (e.KeyCode == Keys.Space) { camera.velocity.z = 4; camera.position.z += camera.velocity.z / engineSettings.physicsUpdate ; }
 
             if (e.KeyCode == Keys.Up) { perspectiveMod += 0.1f; }
             else if(e.KeyCode == Keys.Down) { perspectiveMod -= 0.1f; }
@@ -557,6 +657,7 @@ namespace _3D_Graphics_Engine_Forms
     {
         static string path = @"C:\Users\Sam\Desktop\Test.stl";
 
+        
         public static List<face> loadSTL()
         {
             List<face> faces = new List<face>();
@@ -591,9 +692,9 @@ namespace _3D_Graphics_Engine_Forms
                         vertexTemp3.z = BitConverter.ToSingle(faceBytes, 32);
 
                         face faceTemp = new face();
-                        faceTemp.v1 = vertexTemp1;
-                        faceTemp.v2 = vertexTemp2;
-                        faceTemp.v3 = vertexTemp3;
+                        //faceTemp.v1 = vertexTemp1;
+                        //faceTemp.v2 = vertexTemp2;
+                        //faceTemp.v3 = vertexTemp3;
 
                         faces.Add(faceTemp);
 
@@ -619,9 +720,9 @@ namespace _3D_Graphics_Engine_Forms
     
     public struct face
     {
-        public vertex v1;
-        public vertex v2;
-        public vertex v3;
+        public Point v1;
+        public Point v2;
+        public Point v3;
     }
 
     public struct vertex
@@ -630,6 +731,49 @@ namespace _3D_Graphics_Engine_Forms
         public float y;
         public float z;
     }
-}
+    
+    public class Engine
+    {
+        public class EngineObject
+        {
+            public EngineObject(string nameIn)
+            {
+                name = nameIn;
+                position = new vec3();
+                position.x = 0;
+                position.y = 0;
+                position.z = 0;
+                velocity = new vec3();
+                velocity.x = 0;
+                velocity.y = 0;
+                velocity.z = 0;
+            }
 
+            public string name;
+            public vec3 position;
+            public vec3 velocity;
+        }
+
+        public class EngineSettings
+        {
+            public EngineSettings(int physIn, int rendIn, int upIn)
+            {
+                physicsUpdate = physIn;
+                renderUpdate = rendIn;
+                update = upIn;
+            }
+
+            public int physicsUpdate;
+            public int renderUpdate;
+            public int update;
+        }
+
+        public struct vec3
+        {
+            public float x;
+            public float y;
+            public float z;
+        }
+    }
+}
 
